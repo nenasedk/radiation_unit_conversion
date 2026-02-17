@@ -11,6 +11,498 @@ functions are also provided.
 import astropy.constants as cst
 import astropy.units as u
 
+#TODO: make astropy unit compatible
+def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_wavelength_units=None):
+    '''
+    Overall conversion code. Astropy unit compatible as well as float array compatible.
+    
+    Parameters:
+    -----------
+    in_flux : `astropy.units.Quantity` or 'float'
+        Input flux you wish to convert.
+
+    output_units : `str`
+        Requested output units from list below.
+
+    in_unit : `str`
+        Only used if in_flux is an array of floats instead of an astropy.units.Quantity. Unit must be
+        one of the supported forms below.
+
+    in_wavelength: `astropy.units.Quantity` or 'float'
+        Wavelength corresponding to the flux array
+
+    in_wavelength_units: 'str'
+        Only required if in_wavelength is an array of floats instead of an astropy.units.Quantity.
+        Must be either in A or um.
+
+    Returns:
+    --------
+    `astropy.units.Quantity` or 'float
+        The converted flux in the desired output units. If the input flux is an astropy.units.Quantity,
+        so will the output, otherwise the output flux is a float array.
+
+    Notes:
+    ------
+    Supported units are:
+        - erg/cm2/s
+        - W/m2
+        - W/m2/Hz
+        - W/m2/um
+        - photon/cm2/s/um
+        - erg/cm2/s/Hz
+        - photon/cm2/s/A
+        - erg/cm2/s/A
+        - Jy
+        - erg/cm2/s/Hz
+        - photon/cm2/s/A/sr
+        - Rayleigh
+        - photon/cm2/s/A/deg2
+        - photon/cm2/s/A/arcsec2
+    '''
+    astropy_flag_flux = False
+    astropy_flag_wl = False
+
+    # Check if astropy
+    if type(in_flux) is u.quantity.Quantity:
+        input_units = in_flux.unit
+        flux = in_flux.value
+        astropy_flag_flux = True
+
+    if type(in_wavelength) is u.quantity.Quantity:
+        input_wavelength_units = in_wavelength.unit
+        astropy_flag_wl = True
+
+    else:
+        if in_unit is None:
+            raise ValueError('No input units specified. Either use astropy units or specify input flux units as a string.')
+        input_units = in_unit
+        flux = in_flux
+
+    # Call corresponding conversion
+    if (input_units == u.W/u.m/u.m or input_units == 'W/m2') and output_units == 'erg/cm2/s':
+        output_flux = watt_metersquared2erg_cmsquared_second(flux) 
+        if astropy_flag_flux:
+            output_flux = output_flux * u.erg/u.cm/u.cm/u.s
+
+    elif (input_units == u.erg/u.cm/u.cm/u.s or input_units == 'erg/cm2/s') and output_units == 'W/m2':
+        output_flux = erg_cmsquared_second2watt_metersquared(flux)
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m
+
+    elif (input_units == u.W/u.m/u.m/u.Hz or input_units == 'W/m2/Hz'): 
+        if output_units == 'erg/cm2/s/Hz':
+            output_flux = watt_metersquared_hertz2erg_cmsquared_second_hertz(flux)
+            if astropy_flag_flux:
+                output_flux = output_flux * u.erg/u.cm/u.cm/u.s/u.Hz
+
+        elif output_units == 'erg/cm2/s/A':
+            if astropy_flag_wl:
+                # Check if wavelength is in Angstroms
+                if input_wavelength_units is not u.A:
+                    input_wavelength = in_wavelength.to(u.A).value
+                else:
+                    input_wavelength = in_wavelength.value
+            
+            else:
+                if in_wavelength_units == 'A':
+                    input_wavelength = in_wavelength
+                elif in_wavelength_units == 'um':
+                    input_wavelength = input_wavelength * 1e4
+                else:
+                    raise ValueError('Please input wavelength in either A or um.')
+
+            output_flux = watt_metersquared_hertz2erg_cmsquared_second_angstrom(flux, input_wavelength)
+            
+            if astropy_flag_flux:
+                output_flux = output_flux * u.erg/u.cm/u.cm/u.s/u.A
+
+    elif (input_units == u.erg/u.cm/u.cm/u.s/u.Hz or input_units == 'erg/cm2/s/Hz') and output_units == 'W/m2/Hz':
+        output_flux = erg_cmsquared_second_hertz2watt_metersquaredhertz(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.Hz
+
+    elif (input_units == u.erg/u.cm/u.cm/u.s/u.A or input_units == 'erg/cm2/s/A') and output_units == 'W/m2/Hz':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = erg_cmsquared_second_angstrom2watt_metersquared_hertz(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.Hz
+
+    elif (input_units == u.W/u.m/u.m/u.Hz or input_units == 'W/m2/Hz') and output_units == 'W/m2/um':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = watt_metersquared_hertz2watt_metersquared_micron(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.um
+
+    elif (input_units == u.W/u.m/u.m/u.um or input_units == 'W/m2/um') and output_units == 'W/m2/Hz':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = watt_metersquared_micron2watt_metersquared_hertz(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.Hz
+
+    elif (input_units == u.erg/u.cm/u.cm/u.Hz or input_units == 'erg/cm2/Hz') and output_units == 'photon/cm2/s/um':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = erg_cmsquared_hertz2photon_cmsquared_second_micron(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.um
+
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.um or input_units == 'photon/cm2/s/um') and output_units == 'erg/cm2/Hz':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = photon_cmsquared_second_micron2erg_cmsquared_hertz(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.erg/u.cm/u.cm/u.Hz
+
+    elif (input_units == u.W/u.m/u.m/u.um or input_units == 'W/m2/um') and output_units == 'photon/cm2/s/um':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = watt_metersquared_micron2photon_cmsquared_second_micron(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.um 
+
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.um or input_units == 'photon/cm2/s/um') and output_units == 'W/m2/um':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = photon_cmsquared_second_micron2watt_metersquared_micron(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.um
+
+    elif (input_units == u.erg/u.cm/u.cm/u.s/u.A or input_units == 'erg/cm2/s/A') and output_units == 'photon/cm2/s/A':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = erg_cmsquared_second_angstrom2photon_cmsquared_second_angstrom(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.A
+    
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.A or input_units == 'photon/cm2/s/A') and output_units == 'erg/cm2/s/A':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = photon_cmsquared_second_angstrom2erg_cmsquared_second_angstrom(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.erg/u.cm/u.cm/u.s/u.A
+
+    elif (input_units == u.W/u.m/u.m/u.Hz or input_units == 'W/m2/Hz') and output_units == 'Jy':
+        output_flux = watt_metersquared_hertz2jansky(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.Jy
+
+    elif (input_units == u.Jy or input_units == 'Jy') and output_units == 'W/m2/Hz':
+        output_flux = jansky2watt_metersquared_hertz(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.Hz
+
+    elif (input_units == u.erg/u.cm/u.cm/u.s/u.Hz or input_units == 'erg/cm2/s/Hz') and output_units == 'Jy':
+        output_flux = erg_cmsquared_second_hertz2jansky(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.Jy
+
+    elif (input_units == u.Jy or input_units == 'Jy') and output_units == 'erg/cm2/s/Hz':
+        output_flux = jansky2watt_metersquared_hertz(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.erg/u.cm/u.cm/u.s/u.Hz
+
+    elif (input_units == u.erg/u.cm/u.cm/u.s/u.A or input_units == 'erg/cm2/s/A') and output_units == 'Jy':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = erg_cmsquared_second_angstrom2jansky(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.Jy    
+
+    elif (input_units == u.Jy or input_units == 'Jy') and output_units == 'erg/cm2/s/A':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = jansky2erg_cmsquared_second_angstrom(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.erg/u.cm/u.cm/u.s/u.A
+
+    elif (input_units == u.W/u.m/u.m/u.um or input_units == 'W/m2/um') and output_units == 'Jy':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = watt_metersquared_micron2jansky(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.Jy
+
+    elif (input_units == u.Jy or input_units == 'Jy') and output_units == 'W/m2/um':
+        if astropy_flag_wl:
+            # Check if wavelength is in um
+            if input_wavelength_units is not u.um:
+                input_wavelength = in_wavelength.to(u.um).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'um':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'A':
+                input_wavelength = input_wavelength / 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = jansky2watt_metersquared_micron(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.W/u.m/u.m/u.um
+
+    elif (input_units == u.Jy or input_units == 'Jy') and output_units == 'photon/cm2/s/A':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = jansky2photon_cmsquared_second_angstrom(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.A
+
+
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.A or input_units == 'photon/cm2/s/A') and output_units == 'Jy':
+        if astropy_flag_wl:
+            # Check if wavelength is in Angstroms
+            if input_wavelength_units is not u.A:
+                input_wavelength = in_wavelength.to(u.A).value
+            else:
+                input_wavelength = in_wavelength.value
+
+        else:
+            if in_wavelength_units == 'A':
+                input_wavelength = in_wavelength
+            elif in_wavelength_units == 'um':
+                input_wavelength = input_wavelength * 1e4
+            else:
+                raise ValueError('Please input wavelength in either A or um.')
+
+        output_flux = photon_cmsquared_second_angstrom2jansky(flux, input_wavelength)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.Jy
+
+    elif (input_units == u.R or input_units == 'Rayleigh') and output_units == 'photon/cm2/s/A/sr':
+        output_flux = rayleigh2photon_cmsquared_second_angstrom_steradian(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.A/u.sr
+
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.A/u.sr or input_units == 'photon/cm2/s/A/sr') and output_units == 'Rayleigh':
+        output_flux = photon_cmsquared_second_angstrom_steradian2rayleigh(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.R
+
+    elif (input_units == u.R or input_units == 'Rayleigh') and output_units == 'photon/cm2/s/A/deg2':
+        output_flux = rayleigh2photon_cmsquared_second_angstrom_degreesquared(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.A/u.deg/u.deg
+
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.A/u.deg/u.deg or input_units == 'photon/cm2/s/A/deg2') and output_units == 'Rayleigh':
+        output_flux = photon_cmsquared_second_angstrom_degreesquared2rayleigh(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.R
+
+    elif (input_units == u.R or input_units == 'Rayleigh') and output_units == 'photon/cm2/s/A/arcsec2':
+        output_flux = rayleigh2photon_cmsquared_second_angstrom_arcsecondsquared(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.ph/u.cm/u.cm/u.s/u.A/u.arcsec/u.arcsec
+
+    elif (input_units == u.ph/u.cm/u.cm/u.s/u.A/u.arcsec/u.arcsec or input_units == 'photon/cm2/s/A/arcsec2') and output_units == 'Rayleigh':
+        output_flux = photon_cmsquared_second_angstrom_arcsecondsquared2rayleigh(flux)
+
+        if astropy_flag_flux:
+            output_flux = output_flux * u.R
+
+    else:
+        print('Invalid input or output units. Check inputs.')
+
+    return output_flux
+
 
 def fnu2flambda(input_flux, input_wavelength, output_units):
     """
@@ -36,7 +528,7 @@ def fnu2flambda(input_flux, input_wavelength, output_units):
     Notes:
     ------
     The conversion from f_nu to f_lambda uses the relationship:
-        f_lambda = f_nu * lambda^2 / c
+        f_nu = f_lambda * lambda^2 / c
     where `lambda` is the wavelength and `c` is the speed of light.
     """
     # Convert input flux to W/m^2/Hz
@@ -49,7 +541,7 @@ def fnu2flambda(input_flux, input_wavelength, output_units):
     constant = cst.c.to(u.micron/u.second)
 
     # Convert the flux from f_nu to f_lambda using the formula
-    output = constant.value * input_converted.value / wlen_converted.value**2
+    output = constant.value * input_converted.value /  wlen_converted.value**2
 
     # Multiply by the appropriate units for flux per wavelength
     output *= u.W / u.m**2 / u.micron
@@ -84,7 +576,7 @@ def flambda2fnu(input_flux, input_wavelength, output_units):
     Notes:
     ------
     The conversion from f_lambda to f_nu uses the relationship:
-        f_lambda = f_nu * lambda^2 / c
+        f_nu = f_lambda * lambda^2 / c
     where `lambda` is the wavelength and `c` is the speed of light.
     """
     # Convert input flux to W/m^2/micron
@@ -172,7 +664,7 @@ def watt_metersquared_hertz2erg_cmsquared_second_hertz(input_flux):
     return 1000 * input_flux
 
 
-def erg_cmsquared_secondhertz2watt_metersquaredhertz(input_flux):
+def erg_cmsquared_second_hertz2watt_metersquaredhertz(input_flux):
     """
     Converts flux from the erg/cm^2/s/Hz form to the W/m^2/Hz form.
 
@@ -207,6 +699,8 @@ def watt_metersquared_hertz2erg_cmsquared_second_angstrom(input_flux, input_wave
     `astropy.units.Quantity`
         The converted flux in units erg/cm^2/s/A.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 2.99792458e21
     return constant * input_flux / input_wavelength**2
 
@@ -228,6 +722,8 @@ def erg_cmsquared_second_angstrom2watt_metersquared_hertz(input_flux, input_wave
     `astropy.units.Quantity`
         The converted flux in units W/m^2/Hz.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 2.99792458e21
     return input_flux * input_wavelength**2 / constant
 
@@ -248,6 +744,8 @@ def watt_metersquared_hertz2watt_metersquared_micron(input_flux, input_wavelengt
     `astropy.units.Quantity`
         The converted flux in units W/m^2/um.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 2.99792458e14
     return constant * input_flux/input_wavelength**2
 
@@ -269,6 +767,8 @@ def watt_metersquared_micron2watt_metersquared_hertz(input_flux, input_wavelengt
         The converted flux in units W/m^2/Hz.
     """
     # [Y W/m^2/um] = 2.99792458E+14 * [X1 W/m^2/Hz] / [X2 um]^2
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 2.99792458e14
     return input_flux * input_wavelength**2 / constant
 
@@ -290,6 +790,8 @@ def erg_cmsquared_hertz2photon_cmsquared_second_micron(input_flux, input_wavelen
         The converted flux in units photon/cm^2/s/um.
     """
     # [Y photon/cm^2/s/um] = 1.50918896E+22 * [X1 erg/cm^2/Hz] / [X2 um]
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 1.50918896e22
     return constant * input_flux/input_wavelength
 
@@ -311,6 +813,8 @@ def photon_cmsquared_second_micron2erg_cmsquared_hertz(input_flux, input_wavelen
     `astropy.units.Quantity`
         The converted flux in units erg/cm^2/Hz.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 1.50918896e22
     return input_flux * input_wavelength / constant
 
@@ -333,6 +837,8 @@ def watt_metersquared_micron2photon_cmsquared_second_micron(input_flux, input_wa
         The converted flux in units photon/cm^2/s/um.
     """
     # [Y photon/cm^2/s/um] = 5.03411250E+14 * [X1 W/m^2/um] * [X2 um]
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 5.03411250e14
     return constant * input_flux * input_wavelength
 
@@ -354,6 +860,8 @@ def photon_cmsquared_second_micron2watt_metersquared_micron(input_flux, input_wa
     `astropy.units.Quantity`
         The converted flux in units W/m^2/um.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 5.03411250e14
     return input_flux / input_wavelength / constant
 
@@ -376,6 +884,8 @@ def erg_cmsquared_second_angstrom2photon_cmsquared_second_angstrom(input_flux, i
         The converted flux in units photon/cm^2/s/A.
     """
     # [Y photon/cm^2/s/A] = 5.03411250E+07 * [X1 erg/cm^2/s/A] * [X2 A]
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 5.03411250E+07
     return constant * input_flux * input_wavelength
 
@@ -397,6 +907,8 @@ def photon_cmsquared_second_angstrom2erg_cmsquared_second_angstrom(input_flux, i
     `astropy.units.Quantity`
         The converted flux in units erg/cm^2/s/A.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 5.03411250E+07
     return input_flux / input_wavelength / constant
 
@@ -493,6 +1005,8 @@ def erg_cmsquared_second_angstrom2jansky(input_flux, input_wavelength):
         The converted flux in units Jy.
     """
     # [Y Jy] = 3.33564095E+04 * [X1 erg/cm^2/s/A] * [X2 A]^2
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 1e23/2.99792458e14 #3.33564095e4
     return constant * input_flux * input_wavelength**2
 
@@ -514,6 +1028,8 @@ def jansky2erg_cmsquared_second_angstrom(input_flux, input_wavelength):
     `astropy.units.Quantity`
         The converted flux in units erg/cm^2/s/A.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 3.33564095e4
     return input_flux / input_wavelength**2 / constant
 
@@ -537,6 +1053,8 @@ def watt_metersquared_micron2jansky(input_flux, input_wavelength):
     """
     # constant = 3.33564095e3
     # return constant * input_flux * input_wavelength**2
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     fnu = watt_metersquared_micron2watt_metersquared_hertz(input_flux, input_wavelength)
     return watt_metersquared_hertz2jansky(fnu)
 
@@ -558,6 +1076,8 @@ def jansky2watt_metersquared_micron(input_flux, input_wavelength):
     `astropy.units.Quantity`
         The converted flux in units W/m^2/um.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     fnu = jansky2watt_metersquared_hertz(input_flux)
     return watt_metersquared_hertz2watt_metersquared_micron(fnu,input_wavelength)
 
@@ -579,6 +1099,8 @@ def jansky2photon_cmsquared_second_angstrom(input_flux, input_wavelength):
         The converted flux in units photon/cm^2/s/A.
     """
     # [Y photon/cm^2/s/A] = 1.50918896E+03 * [X1 Jy] / [X2 A]
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 1.50918896e3
     return constant * input_flux / input_wavelength
 
@@ -600,6 +1122,8 @@ def photon_cmsquared_second_angstrom2jansky(input_flux, input_wavelength):
     `astropy.units.Quantity`
         The converted flux in units Jy.
     """
+    if input_wavelength is None:
+        raise ValueError('No input wavelength.')
     constant = 1.50918896e03
     return input_flux * input_wavelength / constant
 

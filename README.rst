@@ -16,7 +16,9 @@ Using astropy units::
   
   flambda_spectrum = np.linspace(1,10,10) * u.W/u.m**2/u.micron
   wavelength = np.linspace(1,5,10) * u.micron
-  fnu_spectrum = units.flambda2fnu(flambda_spectrum, wavelength, u.Jy)
+  fnu_spectrum = units.conversion(in_flux=flambda_spectrum, output_units='Jy', in_wavelength=wavelength)
+
+  
 
 Without using astropy units::
 
@@ -25,11 +27,11 @@ Without using astropy units::
 
   flambda_spectrum = np.linspace(1,10,10) # W/m^2/micron
   wavelength = np.linspace(1,5,10) # micron
-  fnu_spectrum = units.watt_metersquared_micron2jansky(flambda_spectrum, wavelength)
+  fnu_spectrum = units.conversion(in_flux=flambda_spectrum, output_units='Jy', in_unit='W/m2/um', in_wavelength=wavelength, in_wavelength_units='um')
 
 License
 =======
-Copyright 2024 Evert Nasedkin
+Copyright 2024 Madeline Lam and Evert Nasedkin
 
 radiation_unit_conversion is available under the MIT license.
 See the LICENSE file for more information.
