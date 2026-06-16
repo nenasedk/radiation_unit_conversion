@@ -1,13 +1,6 @@
 [build-system]
-build-backend = 'mesonpy'
-requires = [
-    "meson-python>=0.12.1",
-    "ninja>=1.8.2",
-    "Cython>=0.29.35",
-    "pybind11>=2.10.4",
-    "numpy",
-    "astropy",
-]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [project]
 name = "radiation_unit_conversion"
@@ -18,6 +11,7 @@ authors = [
 ]
 readme = "README.rst"
 license = {file = "LICENSE"}
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -30,8 +24,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "meson-python",
-    "ninja",
     "numpy",
     "astropy",
 ]
@@ -44,21 +36,17 @@ Changelog = "https://github.com/nenasedk/radiation_unit_conversion/blob/main/CHA
 [project.optional-dependencies]
 test = [
     "build",
-    "wheel",
     "pytest",
     "pytest-cov",
-    "numpy",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["radiation_unit_conversion"]
+exclude = ["radiation_unit_conversion/tests.py"]
 
 [tool.flake8]
 max-line-length = 120
 
-[tool.pytest]
-norecursedirs = [
-    ".tox",
-    "build",
-    "radiation_unit_conversion",
-]
-
-#[tool.tox]  # TODO add when tox fully supports toml, for now setup is in setup.cfg
-#legacy_tox_ini = """"""
+[tool.pytest.ini_options]
+testpaths = ["radiation_unit_conversion"]
+python_files = ["tests.py", "test_*.py"]

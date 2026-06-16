@@ -61,22 +61,23 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
     '''
     astropy_flag_flux = False
     astropy_flag_wl = False
+    output_flux = None
 
-    # Check if astropy
+    # Check if the flux carries astropy units; otherwise require an explicit unit string.
     if type(in_flux) is u.quantity.Quantity:
         input_units = in_flux.unit
         flux = in_flux.value
         astropy_flag_flux = True
-
-    if type(in_wavelength) is u.quantity.Quantity:
-        input_wavelength_units = in_wavelength.unit
-        astropy_flag_wl = True
-
     else:
         if in_unit is None:
             raise ValueError('No input units specified. Either use astropy units or specify input flux units as a string.')
         input_units = in_unit
         flux = in_flux
+
+    # Check if the wavelength carries astropy units.
+    if type(in_wavelength) is u.quantity.Quantity:
+        input_wavelength_units = in_wavelength.unit
+        astropy_flag_wl = True
 
     # Call corresponding conversion
     if (input_units == u.W/u.m/u.m or input_units == 'W/m2') and output_units == 'erg/cm2/s':
@@ -107,7 +108,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
                 if in_wavelength_units == 'A':
                     input_wavelength = in_wavelength
                 elif in_wavelength_units == 'um':
-                    input_wavelength = input_wavelength * 1e4
+                    input_wavelength = in_wavelength * 1e4
                 else:
                     raise ValueError('Please input wavelength in either A or um.')
 
@@ -134,7 +135,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -155,7 +156,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -176,7 +177,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -197,7 +198,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -218,7 +219,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -239,7 +240,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -260,7 +261,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -281,7 +282,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -302,7 +303,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -330,7 +331,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             output_flux = output_flux * u.Jy
 
     elif (input_units == u.Jy or input_units == 'Jy') and output_units == 'erg/cm2/s/Hz':
-        output_flux = jansky2watt_metersquared_hertz(flux)
+        output_flux = jansky2erg_cmsquared_second_hertz(flux)
 
         if astropy_flag_flux:
             output_flux = output_flux * u.erg/u.cm/u.cm/u.s/u.Hz
@@ -347,7 +348,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -368,7 +369,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -389,7 +390,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -410,7 +411,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'um':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'A':
-                input_wavelength = input_wavelength / 1e4
+                input_wavelength = in_wavelength / 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -431,7 +432,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -453,7 +454,7 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             if in_wavelength_units == 'A':
                 input_wavelength = in_wavelength
             elif in_wavelength_units == 'um':
-                input_wavelength = input_wavelength * 1e4
+                input_wavelength = in_wavelength * 1e4
             else:
                 raise ValueError('Please input wavelength in either A or um.')
 
@@ -499,7 +500,16 @@ def conversion(in_flux, output_units,in_unit=None,in_wavelength=None,in_waveleng
             output_flux = output_flux * u.R
 
     else:
-        print('Invalid input or output units. Check inputs.')
+        raise ValueError(
+            f'Unsupported conversion from {input_units} to {output_units}. '
+            'Check that both units are in the supported list.'
+        )
+
+    if output_flux is None:
+        raise ValueError(
+            f'Unsupported conversion from {input_units} to {output_units}. '
+            'Check that both units are in the supported list.'
+        )
 
     return output_flux
 
@@ -601,12 +611,10 @@ def flambda2fnu(input_flux, input_wavelength, output_units):
 
 
 def wavelength2frequency(input_wavelength, output_units):
-    input_wavelength.to(u.m)
     return (cst.c / input_wavelength).to(output_units)
 
 
 def frequency2wavelength(input_frequency, output_units):
-    input_frequency.to(u.m)
     return (cst.c / input_frequency).to(output_units)
 
 
@@ -1007,7 +1015,8 @@ def erg_cmsquared_second_angstrom2jansky(input_flux, input_wavelength):
     # [Y Jy] = 3.33564095E+04 * [X1 erg/cm^2/s/A] * [X2 A]^2
     if input_wavelength is None:
         raise ValueError('No input wavelength.')
-    constant = 1e23/2.99792458e14 #3.33564095e4
+    # c = 2.99792458e18 A/s, so 1e23 / c = 3.33564095e4
+    constant = 1e23/2.99792458e18 #3.33564095e4
     return constant * input_flux * input_wavelength**2
 
 
@@ -1236,4 +1245,4 @@ def photon_cmsquared_second_angstrom_arcsecondsquared2rayleigh(input_flux):
         The converted flux in units Rayleigh.
     """
     constant = 1.8704247e-6
-    return constant / input_flux
+    return input_flux / constant
